@@ -2,49 +2,16 @@ use std::time::Instant;
 
 use ccp_randomx::{
     bindings::{
-        cache::{randomx_alloc_cache, randomx_init_cache},
+        cache::{randomx_alloc_cache, randomx_init_cache, randomx_release_cache},
         dataset::{randomx_alloc_dataset, randomx_dataset_item_count, randomx_init_dataset},
         vm::{
             randomx_calculate_hash_first, randomx_calculate_hash_last, randomx_calculate_hash_next,
             randomx_create_vm,
         },
     },
-    RandomXFlags, ResultHash, ToRawMut,
+    RandomXFlags,
 };
-use ccp_shared::types::LocalNonce;
 use clap::Parser;
-
-pub(crate) trait NonceIterable {
-    /// Generates the next nonce.
-    fn next(&mut self);
-
-    /// Returns back to the previous nonce/
-    fn prev(&mut self);
-}
-
-impl NonceIterable for LocalNonce {
-    fn next(&mut self) {
-        let mut nonce_as_u64: u64 = u64::from_le_bytes(
-            self.as_mut()[0..std::mem::size_of::<u64>()]
-                .try_into()
-                .unwrap(),
-        );
-        nonce_as_u64 = nonce_as_u64.wrapping_add(1);
-        self.as_mut()[0..std::mem::size_of::<u64>()]
-            .copy_from_slice(&u64::to_le_bytes(nonce_as_u64));
-    }
-
-    fn prev(&mut self) {
-        let mut nonce_as_u64: u64 = u64::from_le_bytes(
-            self.as_mut()[0..std::mem::size_of::<u64>()]
-                .try_into()
-                .unwrap(),
-        );
-        nonce_as_u64 = nonce_as_u64.wrapping_sub(1);
-        self.as_mut()[0..std::mem::size_of::<u64>()]
-            .copy_from_slice(&u64::to_le_bytes(nonce_as_u64));
-    }
-}
 
 #[derive(Parser, Clone, Debug)]
 struct Args {
@@ -85,30 +52,22 @@ fn main() {
 
         let vm = randomx_create_vm(flags.bits(), cache, dataset);
 
-        let mut local_nonce = LocalNonce::random();
-
         let start = Instant::now();
+
         randomx_calculate_hash_first(
             vm,
-            local_nonce.as_ref().as_ptr() as *const std::ffi::c_void,
+            block_template.as_ptr() as *const std::ffi::c_void,
             block_template.len(),
         );
-
         for _ in 0..=hashes_number {
-            local_nonce.next();
-            let mut hash = ResultHash::empty();
             randomx_calculate_hash_next(
                 vm,
-                local_nonce.as_ref().as_ptr() as *const std::ffi::c_void,
-                local_nonce.as_ref().len(),
-                hash.as_mut().as_mut_ptr() as *mut std::ffi::c_void,
+                block_template.as_ptr() as *const std::ffi::c_void,
+                block_template.len(),
+                hash.as_mut_ptr() as *mut std::ffi::c_void,
             )
         }
-
-        {
-            let mut hash = ResultHash::empty();
-            randomx_calculate_hash_last(vm, hash.as_mut().as_mut_ptr() as *mut std::ffi::c_void);
-        }
+        randomx_calculate_hash_last(vm, hash.as_mut_ptr() as *mut std::ffi::c_void);
 
         let duration = start.elapsed().as_secs_f64();
         println!(
