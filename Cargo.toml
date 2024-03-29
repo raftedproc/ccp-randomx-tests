@@ -1,9 +1,15 @@
-[package]
-name = "rust-randomx-benchmark"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
+members = [
+    "randomx-hash-calculator",
+    "static-ccp",
+]
 
-[dependencies]
-ccp-randomx = { version = "0.2.0", path = "../capacity-commitment-prover/crates/randomx" }
-ccp-shared = "0.1.0"
+[workspace.dependencies]
+
 clap = { version = "4.5.1", features = ["derive"] }
+rayon = "1.10.0"
+rand = "0.8.5"
+ccp-randomx = "0.8.0"
+ccp-utils = "0.8.0"
+ccp-shared = "0.8.0"

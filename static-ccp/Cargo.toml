@@ -1,0 +1,15 @@
+[package]
+name = "static-cpp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ccp-randomx = { workspace = true }
+ccp-shared = { workspace = true }
+ccp-utils = { workspace = true }
+clap = { workspace = true }
+rayon = { workspace = true }
+rand = { workspace = true }
+
+
+
